@@ -39,30 +39,6 @@ app.layout = html.Div([
     ], style={'marginBottom': '20px'}),
     html.Button('Submit', id='submit-button', n_clicks=0,disabled=False),
     html.Div(id='output-div', style={'marginTop': '20px'}),
-
-    # Geolocation script to fetch coordinates when the button is clicked
-    html.Script("""
-        function getLocation() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(function(position) {
-                    const coords = {
-                        lat: position.coords.latitude,
-                        lon: position.coords.longitude
-                    };
-                    const geoStore = document.querySelector('#geo-coordinates');
-                    geoStore.dataset.props = JSON.stringify({ data: coords });
-                    geoStore.dispatchEvent(new Event('input'));
-                }, function() {
-                    alert("Sorry, no position available.");
-                });
-            } else {
-                alert("Geolocation is not supported by this browser.");
-            }
-        }
-
-        // Trigger location fetch when the submit button is clicked
-        document.getElementById("submit-button").addEventListener("click", getLocation);
-    """)
 ])
 
 @app.callback(
