@@ -1,6 +1,8 @@
-from dash import Dash, html, dcc, Input, Output
+from dash import Dash, html, dcc, Input, Output, no_update
 import boto3
 from datetime import datetime
+import csv
+from io import StringIO
 app = Dash(__name__)
 s3 = boto3.client('s3')  # usa las credenciales configuradas con `aws configure`
 
@@ -35,58 +37,63 @@ app.layout = html.Div([
             style={'width': '100%', 'height': '100px'}
         ),
     ], style={'marginBottom': '20px'}),
-    html.Button('Submit', id='submit-button', n_clicks=0),
+    html.Button('Submit', id='submit-button', n_clicks=0,disabled=False),
     html.Div(id='output-div', style={'marginTop': '20px'}),
-    html.Div([
+
+    # Geolocation script to fetch coordinates when the button is clicked
     html.Script("""
-        document.addEventListener("DOMContentLoaded", function() {
+        function getLocation() {
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(function(position) {
                     const coords = {
                         lat: position.coords.latitude,
                         lon: position.coords.longitude
                     };
-                    const store = document.querySelector('[data-dash-is-loading="false"] [id="geo-coordinates"]');
-                    if (store) {
-                        store.setAttribute("data-data", JSON.stringify(coords));
-                        store.dispatchEvent(new Event("change"));
-                    }
+                    const geoStore = document.querySelector('#geo-coordinates');
+                    geoStore.dataset.props = JSON.stringify({ data: coords });
+                    geoStore.dispatchEvent(new Event('input'));
+                }, function() {
+                    alert("Sorry, no position available.");
                 });
+            } else {
+                alert("Geolocation is not supported by this browser.");
             }
-        });
+        }
+
+        // Trigger location fetch when the submit button is clicked
+        document.getElementById("submit-button").addEventListener("click", getLocation);
     """)
-])
 ])
 
 @app.callback(
-    Output('output-div', 'children'),
-    Input('submit-button', 'n_clicks'),
-    [Input('name-input', 'value'),
+    [Output('output-div', 'children'),Output('submit-button', 'disabled')],
+    [Input('submit-button', 'n_clicks'),
+    Input('name-input', 'value'),
      Input('color-dropdown', 'value'),
-     Input('comments-textarea', 'value'),
-     Input('geo-coordinates', 'data')]
+     Input('comments-textarea', 'value'),]
 )
-def update_output(n_clicks, name, color, comments, geo_data):
+def update_output(n_clicks, name, color, comments):
     if n_clicks > 0:
         now = datetime.now().strftime('%Y%m%d_%H%M%S')
-        nombre_archivo = f'respuesta_{now}.txt'
+        nombre_archivo = f'respuesta_{now}.csv'
+        # Create CSV content
+        csv_buffer = StringIO()
+        csv_writer = csv.writer(csv_buffer)
+        csv_writer.writerow(["Name", "Favorite Color", "Comments" ])
+        csv_writer.writerow([name, color, comments])
 
-        lat, lon = None, None
-        if geo_data:
-            lat = geo_data.get("lat")
-            lon = geo_data.get("lon")
-        # with open(nombre_archivo, 'w', encoding='utf-8') as file:
-        #     file.write(f"Nombre: {name} \n Color: {color} \n Comentario: {comments}")
-        contenido = f"Nombre: {name} \nColor: {color} \nComentario: {comments} \nLatitud: {lat} \nLongitud: {lon}"
-        s3.put_object(Bucket=BUCKET_NAME, Key=nombre_archivo, Body=contenido.encode('utf-8'))
+        # Upload CSV to S3
+        s3.put_object(Bucket=BUCKET_NAME, Key=nombre_archivo, Body=csv_buffer.getvalue().encode('utf-8'))
 
         return html.Div([
+            html.H2(f"Respuesta Guardada a la hora {now} "),
             html.P(f"Name: {name}"),
             html.P(f"Favorite Color: {color}"),
-            html.P(f"Comments: {comments}"),
-            html.P(f"Lat: {lat}, Lon: {lon}")
-        ])
-    return ""
-
+            html.P(f"Comments: {comments}")
+        ]), True
+    return "", no_update
+#Falta ver la manera de ejecutar javascript cuando se da click en submit o al cargar a página.
+#navigator.geolocation.getCurrentPosition(function(position) {
+#    console.log(position.coords.latitude, position.coords.longitude);
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8050)
