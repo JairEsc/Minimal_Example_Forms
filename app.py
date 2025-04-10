@@ -10,7 +10,7 @@ app = Dash(__name__)
 DB_HOST = 'database-1.c12wu4gkibta.us-east-2.rds.amazonaws.com'
 DB_USER = 'admin'
 DB_PASSWORD = 'pass_mysql'
-DB_NAME = 'database-1'
+DB_NAME = 'prueba_sql'
 
 # Create the connection
 def get_db_connection():
