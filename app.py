@@ -9,7 +9,7 @@ app = Dash(__name__)
 # RDS MySQL credentials and connection setup
 DB_HOST = 'database-1.c12wu4gkibta.us-east-2.rds.amazonaws.com'
 DB_USER = 'admin'
-DB_PASSWORD = 'pass_mysql'
+DB_PASSWORD = '------'
 DB_NAME = 'prueba_sql'
 
 # Create the connection
@@ -65,7 +65,7 @@ app.layout = html.Div([
 )
 def update_output(n_clicks, name, color, comments):
     if n_clicks > 0:
-        now = datetime.now().strftime('%Y%m%d_%H%M%S')
+        now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         # Connect to the RDS MySQL database
         conn = get_db_connection()
         cursor = conn.cursor()
